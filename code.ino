@@ -5,6 +5,9 @@
 #define motor_B_pwm 6 // moteur de gauche
 #define motor_B_sens 7
 
+#define read_tl 1
+#define read_tr 11
+
 // --- Capteurs pins ---
 #define LUMIERE_GAUCHE 12
 #define LUMIERE_DROITE 13
@@ -18,8 +21,12 @@
 #define pwm_period 1000 // microseconds
 
 // --- Motors variables ---
-float pwm_proportion_A;
-float pwm_proportion_B;
+float pwm_proportion_A = 0;
+float pwm_proportion_B = 0;
+bool last_state_l = false;
+bool last_state_r = false;
+int picots_l = 0;
+int picots_r = 0;
 
 // --- Capteurs variables ---
 bool etpDirLumiere = true; //  Rotation sur place pour trouver la lumiere pour avancer
@@ -38,6 +45,9 @@ void setup() {
   pinMode(motor_A_sens, OUTPUT);
   pinMode(motor_B_pwm, OUTPUT);
   pinMode(motor_B_sens, OUTPUT);
+  // --- Dist pins ---  
+  pinMode(read_tl, INPUT);
+  pinMode(read_tr, INPUT);
   // --- Capteurs pins ---
   pinMode(LUMIERE_GAUCHE, INPUT);
   pinMode(LUMIERE_DROITE, INPUT);
@@ -47,66 +57,73 @@ void setup() {
   // --- Motors pins out ---
   digitalWrite(motor_A_sens, HIGH);
   digitalWrite(motor_B_sens, HIGH);
-  pwm_proportion_A = 0;
-  pwm_proportion_B = 0;
 }
 
 void loop() {
   bool res;
   
-  if (etpDirLumiere){
+  if (etpDirLumiere){ // Rotation
     res = detectionLumiereLateral();
     if (res){
       etpDirLumiere = false;
       etpPasserPorte = true;
     }
     
-  } else if (etpPasserPorte){
+  } else if (etpPasserPorte){ // Avance
     detectionLumiereFace();
     res = detectionMurFace();
     if (res){
       etpPasserPorte = false;
       etpVirageDroiteEntree = true;
+      reset_dist();
     }
     
-  } else if (etpVirageDroiteEntree){ //TODO: Virage
-    res = virage(); 
+  } else if (etpVirageDroiteEntree){ // Virage
+    update_dist();
+    tournerVirageDroite();
+    res = finVirageDroite90(); 
     if (res){
       etpVirageDroiteEntree = false;
       etpPorteGauche = true;
     }
     
-  } else if (etpPorteGauche){
+  } else if (etpPorteGauche){ // Avance
     detectionMurLateral();
     res = detectionPorteGauche();
     if (res){
       etpPorteGauche = false;
       etpVirageGauche = true;
+      reset_dist();
     }
 
-  } else if (etpVirageGauche){ //TODO: Virage
-    res = virage();
+  } else if (etpVirageGauche){ // Virage
+    update_dist();    
+    tournerVirageGauche();
+    res = finVirageGauche180();
     if (res){
       etpVirageGauche = false;
       etpPorteDroite = true;
     }
     
-  } else if (etpPorteDroite){
+  } else if (etpPorteDroite){ // Avance
     detectionMurLateral();
     res = detectionPorteDroite();
     if (res){
       etpPorteDroite = false;
       etpVirageDroiteSortie = true;
+      reset_dist();
     }
     
-  } else if (etpVirageDroiteSortie){ //TODO: Virage
-    res = virage();
+  } else if (etpVirageDroiteSortie){ // Virage
+    update_dist();
+    tournerVirageDroite();
+    res = finVirageDroite90();
     if (res){
       etpVirageDroiteSortie = false;
       etpFinirCourse = true;
     }
     
-  } else if (etpFinirCourse){
+  } else if (etpFinirCourse){ // Avance
     avancer();
   }
 
@@ -132,8 +149,18 @@ void gestion_pwm_motor_B(){
     }
 }
 
-bool virage(){
-  return true;
+bool finVirageDroite90(){
+  if ( picots_l >= 151){    
+    return true;
+  }
+  return false;
+}
+
+bool finVirageGauche180(){
+  if ( picots_r >= 151*2){    
+    return true;
+  }
+  return false;
 }
 
 void avancer(){
@@ -162,14 +189,30 @@ void ajusterVersDroite(){
 }
 
 void tournerVirageDroite(){  
-  pwm_proportion_A = 0.5;
+  pwm_proportion_A = 0.28;
   pwm_proportion_B = 1;  
 }
 
 void tournerVirageGauche(){
   pwm_proportion_A = 1;
-  pwm_proportion_B = 0.5;
+  pwm_proportion_B = 0.28;
   
+}
+
+void update_dist() {
+    if(digitalRead(read_tl) != last_state_l) {
+        picots_l++;
+        last_state_l = !last_state_l ;
+    }
+    if(digitalRead(read_tr) != last_state_r) {
+        picots_r++;
+        last_state_r = !last_state_r;
+    }
+}
+
+void reset_dist() {  
+    picots_l = 0;    
+    picots_r = 0;
 }
 // ----- ----- ----- ----- -----
 
