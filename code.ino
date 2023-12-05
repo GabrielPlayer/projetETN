@@ -157,7 +157,7 @@ bool finVirageDroite90(){
 }
 
 bool finVirageGauche180(){
-  if ( picots_r >= 151*2){    
+  if ( picots_r >= 151*2){
     return true;
   }
   return false;
@@ -257,14 +257,14 @@ bool detectionMurFace(){
 
 void detectionMurLateral(){
   bool murGauche = digitalRead(MUR_GAUCHE);
-  bool murDroite = digitalRead(MUR_FACE);
-  if (murGauche == false && murDroite == false) {
+  bool murDroite = digitalRead(MUR_DROITE);
+  if (murGauche == true && murDroite == false) {
     avancer();
   }
-  else if (murGauche == true && murDroite == false) {
+  else if (murGauche == true && murDroite == true) {
      ajusterVersGauche();
   }
-  else if (murGauche == false && murDroite == true) {
+  else if (murGauche == false && murDroite == false) {
      ajusterVersDroite();
   }  
 }
